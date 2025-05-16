@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -8,7 +8,7 @@ import CodeMirror from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
 import { vscodeDark } from "@uiw/codemirror-theme-vscode";
 import { EditorView } from "@codemirror/view";
-import { FaBold, FaItalic, FaUnderline, FaLink, FaImage, FaCode, FaTable, FaListUl, FaListOl, FaQuoteLeft, FaHeading, FaDownload, FaSave, FaFileExport, FaEye, FaEdit, FaColumns, FaCheck } from "react-icons/fa";
+import { FaBold, FaItalic, FaUnderline, FaLink, FaImage, FaCode, FaTable, FaListUl, FaListOl, FaQuoteLeft, FaHeading, FaSave, FaFileExport, FaEye, FaEdit, FaColumns, FaCheck } from "react-icons/fa";
 
 interface MarkdownEditorProps {
   initialContent?: string;
@@ -21,6 +21,21 @@ export function MarkdownEditor({ initialContent = "", fileName }: MarkdownEditor
   const [fontSize, setFontSize] = useState(14);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
+
+  const insertMarkdownSyntax = (prefix: string, suffix: string, placeholder: string) => {
+    setContent((prev) => `${prev}${prefix}${placeholder}${suffix}`);
+  };
+
+  const saveContent = useCallback(() => {
+    localStorage.setItem(`mdvie-${fileName}`, content);
+    setLastSaved(new Date());
+    
+    // Kaydetme onayını göster ve 2 saniye sonra kaldır
+    setShowSaveConfirmation(true);
+    setTimeout(() => {
+      setShowSaveConfirmation(false);
+    }, 2000);
+  }, [content, fileName]);
 
   // Dosya değiştiğinde içeriği sıfırla
   useEffect(() => {
@@ -86,24 +101,9 @@ export function MarkdownEditor({ initialContent = "", fileName }: MarkdownEditor
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [content]);
+  }, [saveContent]);
 
-  const insertMarkdownSyntax = (prefix: string, suffix: string, placeholder: string) => {
-    setContent((prev) => `${prev}${prefix}${placeholder}${suffix}`);
-  };
-
-  const saveContent = () => {
-    localStorage.setItem(`mdvie-${fileName}`, content);
-    setLastSaved(new Date());
-    
-    // Kaydetme onayını göster ve 2 saniye sonra kaldır
-    setShowSaveConfirmation(true);
-    setTimeout(() => {
-      setShowSaveConfirmation(false);
-    }, 2000);
-  };
-
-  const exportMarkdown = () => {
+  const exportMarkdown = useCallback(() => {
     const blob = new Blob([content], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -113,7 +113,7 @@ export function MarkdownEditor({ initialContent = "", fileName }: MarkdownEditor
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  };
+  }, [content, fileName]);
 
   // Araç çubuğu işlevleri
   const handleToolbarClick = (action: string) => {
